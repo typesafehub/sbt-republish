@@ -9,6 +9,9 @@ object SbtRepublish extends Build {
   val PublishedVersion = "0.13.0-SNAPSHOT"
   val ScalaVersion = "2.9.2"
 
+  val ReleaseRepository = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+  val SnapshotRepository = "https://oss.sonatype.org/content/repositories/snapshots"
+
   val Deps = config("deps") hide
 
   lazy val buildSettings = Defaults.defaultSettings ++ Seq(
@@ -18,9 +21,31 @@ object SbtRepublish extends Build {
     crossPaths := false,
     publishMavenStyle := true,
     publishTo := Some(Resolver.file("m2", file(Path.userHome + "/.m2/repository"))),
-    publishArtifact in packageDoc := false,
-    publishArtifact in packageSrc := false,
+    // publishTo <<= version { v =>
+    //   if (v.trim.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
+    //   else Some("releases" at ReleaseRepository)
+    // },
     publishArtifact in Test := false,
+    homepage := Some(url("http://www.typesafe.com")),
+    licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
+    pomExtra := {
+      <scm>
+        <url>https://github.com/pvlugter/sbt-republish</url>
+        <connection>scm:git:git@github.com:pvlugter/sbt-republish.git</connection>
+      </scm>
+      <developers>
+        <developer>
+          <id>harrah</id>
+          <name>Mark Harrah</name>
+          <url>http://www.typesafe.com</url>
+        </developer>
+        <developer>
+          <id>pvlugter</id>
+          <name>Peter Vlugter</name>
+          <url>http://www.typesafe.com</url>
+        </developer>
+      </developers>
+    },
     pomIncludeRepository := { _ => false },
     ivyConfigurations += Deps,
     externalResolvers <<= resolvers map { rs => Resolver.withDefaultResolvers(rs, scalaTools = false) }
@@ -31,7 +56,7 @@ object SbtRepublish extends Build {
     file("."),
     aggregate = Seq(sbtInterface, compilerInterface, incrementalCompiler),
     settings = buildSettings ++ Seq(
-      publishArtifact in packageBin := false,
+      publishArtifact := false,
       publishArtifact in makePom := false
     )
   )
