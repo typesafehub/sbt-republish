@@ -18,14 +18,12 @@ object SbtRepublish extends Build {
     crossPaths := false,
     publishMavenStyle := true,
     publishTo := Some(Resolver.file("m2", file(Path.userHome + "/.m2/repository"))),
-    pomPostProcess := cleanPom _,
     publishArtifact in packageDoc := false,
     publishArtifact in packageSrc := false,
     publishArtifact in Test := false,
+    pomIncludeRepository := { _ => false },
     ivyConfigurations += Deps,
-    externalResolvers <<= resolvers map { rs =>
-      Resolver.withDefaultResolvers(rs, scalaTools = false)
-    }
+    externalResolvers <<= resolvers map { rs => Resolver.withDefaultResolvers(rs, scalaTools = false) }
   )
 
   lazy val sbtRepublish = Project(
@@ -43,14 +41,7 @@ object SbtRepublish extends Build {
     file("sbt-interface"),
     settings = buildSettings ++ Seq(
       libraryDependencies += "org.scala-sbt" % "interface" % SbtVersion % Deps.name,
-      packageBin in Compile <<= (classpathTypes, update, artifactPath in packageBin in Compile) map {
-        (types, up, packaged) => {
-          val cp = Classpaths.managedJars(Deps, types, up)
-          val interfaceJar = cp.find(_.data.getName == "interface.jar").get.data
-          IO.copyFile(interfaceJar, packaged, false)
-          packaged
-        }
-      }
+      packageBin in Compile <<= repackageDependency(packageBin, "interface.jar")
     )
   )
 
@@ -59,14 +50,7 @@ object SbtRepublish extends Build {
     file("compiler-interface"),
     settings = buildSettings ++ Seq(
       libraryDependencies += "org.scala-sbt" % "compiler-interface" % SbtVersion % Deps.name classifier "src",
-      packageSrc in Compile <<= (classpathTypes, update, artifactPath in packageSrc in Compile) map {
-        (types, up, packaged) => {
-          val cp = Classpaths.managedJars(Deps, types, up)
-          val interfaceJar = cp.find(_.data.getName == "compiler-interface-src.jar").get.data
-          IO.copyFile(interfaceJar, packaged, false)
-          packaged
-        }
-      },
+      packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src.jar"),
       publishArtifact in packageBin := false,
       publishArtifact in (Compile, packageSrc) := true
     )
@@ -83,7 +67,7 @@ object SbtRepublish extends Build {
       fullClasspath in assembly <<= managedClasspath in Deps,
       assembleArtifact in packageScala := false,
       excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
-        cp filter { _.data.getName == "scala-compiler.jar" }
+        cp filter { jar => Set("scala-compiler.jar", "interface.jar") contains jar.data.getName }
       },
       mergeStrategy in assembly := {
         case "NOTICE" => MergeStrategy.first
@@ -95,15 +79,14 @@ object SbtRepublish extends Build {
     )
   )
 
-  def cleanPom(pomNode: scala.xml.Node) = {
-    import scala.xml._
-    def cleanNodes(nodes: Seq[Node]): Seq[Node] = nodes flatMap ( _ match {
-      case Elem(prefix, "repositories", attributes, scope, children @ _*) =>
-         NodeSeq.Empty
-      case Elem(prefix, label, attributes, scope, children @ _*) =>
-         Elem(prefix, label, attributes, scope, cleanNodes(children): _*).theSeq
-      case other => other
-    })
-    cleanNodes(pomNode.theSeq)(0)
+  def repackageDependency(packageTask: TaskKey[File], jarName: String) = {
+    (classpathTypes, update, artifactPath in packageTask in Compile) map {
+      (types, up, packaged) => {
+        val cp = Classpaths.managedJars(Deps, types, up)
+        val jar = cp.find(_.data.getName == jarName).get.data
+        IO.copyFile(jar, packaged, false)
+        packaged
+      }
+    }
   }
 }
