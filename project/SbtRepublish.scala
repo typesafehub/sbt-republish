@@ -21,8 +21,7 @@ object SbtRepublish extends Build {
     crossPaths := false,
     publishMavenStyle := true,
     publishTo <<= version { v =>
-      if (v.endsWith("LOCAL")) Some(Resolver.file("local", file(Path.userHome + "/.m2/repository"))),
-      else if (v.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
+      if (v.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
       else Some("releases" at ReleaseRepository)
     },
     publishArtifact in Test := false,
