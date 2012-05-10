@@ -20,13 +20,13 @@ object SbtRepublish extends Build {
     scalaVersion := ScalaVersion,
     crossPaths := false,
     publishMavenStyle := true,
-    publishTo := Some(Resolver.file("m2", file(Path.userHome + "/.m2/repository"))),
-    // publishTo <<= version { v =>
-    //   if (v.trim.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
-    //   else Some("releases" at ReleaseRepository)
-    // },
+    publishTo <<= version { v =>
+      if (v.endsWith("LOCAL")) Some(Resolver.file("local", file(Path.userHome + "/.m2/repository"))),
+      else if (v.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
+      else Some("releases" at ReleaseRepository)
+    },
     publishArtifact in Test := false,
-    homepage := Some(url("http://www.typesafe.com")),
+    homepage := Some(url("https://github.com/harrah/xsbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
     pomExtra := {
       <scm>
@@ -37,12 +37,12 @@ object SbtRepublish extends Build {
         <developer>
           <id>harrah</id>
           <name>Mark Harrah</name>
-          <url>http://www.typesafe.com</url>
+          <url>https://github.com/harrah</url>
         </developer>
         <developer>
           <id>pvlugter</id>
           <name>Peter Vlugter</name>
-          <url>http://www.typesafe.com</url>
+          <url>https://github.com/pvlugter</url>
         </developer>
       </developers>
     },
