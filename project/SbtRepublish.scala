@@ -5,25 +5,29 @@ import sbtassembly.Plugin.AssemblyKeys._
 
 object SbtRepublish extends Build {
 
-  val SbtVersion = "0.13.0-SNAPSHOT"
-  val PublishedVersion = "0.13.0-SNAPSHOT"
-  val ScalaVersion = "2.9.2"
-
   val ReleaseRepository = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
   val SnapshotRepository = "https://oss.sonatype.org/content/repositories/snapshots"
 
   val Deps = config("deps") hide
 
+  val originalSbtVersion = SettingKey[String]("original-sbt-version")
+  val publishLocally = SettingKey[Boolean]("publish-locally")
+
   lazy val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.typesafe.sbt",
-    version := PublishedVersion,
-    scalaVersion := ScalaVersion,
+    version := "0.13.0-SNAPSHOT",
+    scalaVersion := "2.9.2",
+    originalSbtVersion <<= version { v => if (v.endsWith("SNAPSHOT")) "latest.integration" else v },
+    resolvers <+= version { v => if (v.endsWith("SNAPSHOT")) Classpaths.typesafeSnapshots else Classpaths.typesafeResolver },
     crossPaths := false,
     publishMavenStyle := true,
-    publishTo <<= version { v =>
-      if (v.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
+    publishLocally := false,
+    publishTo <<= (version, publishLocally) { (v, local) =>
+      if (local) Some(Resolver.file("m2", Path.userHome / ".m2" / "repository"))
+      else if (v.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
       else Some("releases" at ReleaseRepository)
     },
+    credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
     publishArtifact in Test := false,
     homepage := Some(url("https://github.com/harrah/xsbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
@@ -64,8 +68,8 @@ object SbtRepublish extends Build {
     "sbt-interface",
     file("sbt-interface"),
     settings = buildSettings ++ Seq(
-      libraryDependencies += "org.scala-sbt" % "interface" % SbtVersion % Deps.name,
-      packageBin in Compile <<= repackageDependency(packageBin, "interface.jar")
+      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "interface" % _ % Deps.name },
+      packageBin in Compile <<= repackageDependency(packageBin, "interface")
     )
   )
 
@@ -73,8 +77,8 @@ object SbtRepublish extends Build {
     "compiler-interface",
     file("compiler-interface"),
     settings = buildSettings ++ Seq(
-      libraryDependencies += "org.scala-sbt" % "compiler-interface" % SbtVersion % Deps.name classifier "src",
-      packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src.jar"),
+      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-interface" % _ % Deps.name classifier "src" },
+      packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface"),
       publishArtifact in packageBin := false,
       publishArtifact in (Compile, packageSrc) := true
     )
@@ -85,8 +89,8 @@ object SbtRepublish extends Build {
     file("incremental-compiler"),
     dependencies = Seq(sbtInterface),
     settings = buildSettings ++ assemblySettings ++ Seq(
-      libraryDependencies += "org.scala-sbt" % "compiler-integration" % SbtVersion % Deps.name,
-      libraryDependencies += "org.scala-lang" % "scala-compiler" % ScalaVersion,
+      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-integration" % _ % Deps.name },
+      libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-compiler" % _ },
       managedClasspath in Deps <<= (classpathTypes, update) map { (types, up) => Classpaths.managedJars(Deps, types, up) },
       fullClasspath in assembly <<= managedClasspath in Deps,
       assembleArtifact in packageScala := false,
@@ -107,7 +111,7 @@ object SbtRepublish extends Build {
     (classpathTypes, update, artifactPath in packageTask in Compile) map {
       (types, up, packaged) => {
         val cp = Classpaths.managedJars(Deps, types, up)
-        val jar = cp.find(_.data.getName == jarName).get.data
+        val jar = cp.find(_.data.getName startsWith jarName).get.data
         IO.copyFile(jar, packaged, false)
         packaged
       }
