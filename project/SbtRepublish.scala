@@ -29,7 +29,7 @@ object SbtRepublish extends Build {
       else Some("releases" at ReleaseRepository)
     },
     credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
-    pgpPassphrase := Option(System.getenv("SBT_REPUBLISH_PASSPHRASE")).map(_.toArray),
+    pgpPassphrase := Option(System.getProperty("pgp.passphrase")).map(_.toArray),
     publishArtifact in Test := false,
     homepage := Some(url("https://github.com/harrah/xsbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
