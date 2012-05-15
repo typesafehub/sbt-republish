@@ -29,7 +29,7 @@ object SbtRepublish extends Build {
       else Some("releases" at ReleaseRepository)
     },
     credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
-    pgpPassphrase := Option(System.getProperty("pgp.passphrase")).map(_.toArray),
+    pgpPassphrase in GlobalScope := environment("pgp.passphrase", "PGP_PASSPHRASE") map (_.toArray),
     publishArtifact in Test := false,
     homepage := Some(url("https://github.com/harrah/xsbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
@@ -119,4 +119,7 @@ object SbtRepublish extends Build {
       }
     }
   }
+
+  def environment(property: String, env: String): Option[String] =
+    Option(System.getProperty(property)) orElse Option(System.getenv(env))
 }
