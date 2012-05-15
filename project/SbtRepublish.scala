@@ -2,6 +2,7 @@ import sbt._
 import sbt.Keys._
 import sbtassembly.Plugin._
 import sbtassembly.Plugin.AssemblyKeys._
+import com.jsuereth.pgp.sbtplugin.PgpKeys.pgpPassphrase
 
 object SbtRepublish extends Build {
 
@@ -28,6 +29,7 @@ object SbtRepublish extends Build {
       else Some("releases" at ReleaseRepository)
     },
     credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
+    pgpPassphrase := Option(System.getenv("SBT_REPUBLISH_PASSPHRASE")).map(_.toArray),
     publishArtifact in Test := false,
     homepage := Some(url("https://github.com/harrah/xsbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
