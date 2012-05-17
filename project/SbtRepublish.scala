@@ -35,8 +35,8 @@ object SbtRepublish extends Build {
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
     pomExtra := {
       <scm>
-        <url>https://github.com/pvlugter/sbt-republish</url>
-        <connection>scm:git:git@github.com:pvlugter/sbt-republish.git</connection>
+        <url>https://github.com/typesafehub/sbt-republish</url>
+        <connection>scm:git:git@github.com:typesafehub/sbt-republish.git</connection>
       </scm>
       <developers>
         <developer>
