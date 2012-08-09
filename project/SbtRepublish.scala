@@ -99,9 +99,11 @@ object SbtRepublish extends Build {
       excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
         cp filter { jar => Set("scala-compiler.jar", "interface.jar") contains jar.data.getName }
       },
-      mergeStrategy in assembly := {
-        case "NOTICE" => MergeStrategy.first
-        case _ => MergeStrategy.deduplicate
+      mergeStrategy in assembly <<= (mergeStrategy in assembly) apply { old =>
+        {
+          case "NOTICE" => MergeStrategy.first
+          case x => old(x)
+        }
       },
       packageBin in Compile <<= (assembly, artifactPath in packageBin in Compile) map {
         (assembled, packaged) => IO.copyFile(assembled, packaged, false); packaged
