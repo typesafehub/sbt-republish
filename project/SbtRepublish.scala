@@ -2,7 +2,6 @@ import sbt._
 import sbt.Keys._
 import sbtassembly.Plugin._
 import sbtassembly.Plugin.AssemblyKeys._
-import com.jsuereth.pgp.sbtplugin.PgpKeys.pgpPassphrase
 
 object SbtRepublish extends Build {
 
@@ -19,7 +18,7 @@ object SbtRepublish extends Build {
     version := "0.13.0-SNAPSHOT",
     scalaVersion := "2.9.2",
     originalSbtVersion <<= version { v => if (v.endsWith("SNAPSHOT")) "latest.integration" else v },
-    resolvers <+= version { v => if (v.endsWith("SNAPSHOT")) Classpaths.typesafeSnapshots else Classpaths.typesafeResolver },
+    resolvers <+= version { v => if (v.endsWith("SNAPSHOT")) Classpaths.typesafeSnapshots else Classpaths.typesafeReleases },
     crossPaths := false,
     publishMavenStyle := true,
     publishLocally := false,
@@ -29,7 +28,6 @@ object SbtRepublish extends Build {
       else Some("releases" at ReleaseRepository)
     },
     credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
-    pgpPassphrase in GlobalScope := environment("pgp.passphrase", "PGP_PASSPHRASE") map (_.toArray),
     publishArtifact in Test := false,
     homepage := Some(url("https://github.com/harrah/xsbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
@@ -99,10 +97,10 @@ object SbtRepublish extends Build {
       excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
         cp filter { jar => Set("scala-compiler.jar", "interface.jar") contains jar.data.getName }
       },
-      mergeStrategy in assembly := {
+      mergeStrategy in assembly <<= (mergeStrategy in assembly)( default => {
         case "NOTICE" => MergeStrategy.first
-        case _ => MergeStrategy.deduplicate
-      },
+        case x => default(x)
+      }),
       packageBin in Compile <<= (assembly, artifactPath in packageBin in Compile) map {
         (assembled, packaged) => IO.copyFile(assembled, packaged, false); packaged
       }
