@@ -16,9 +16,10 @@ object SbtRepublish extends Build {
   lazy val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.typesafe.sbt",
     version := "0.13.0-SNAPSHOT",
-    scalaVersion := "2.9.2",
+    scalaVersion := "2.10.0",
     originalSbtVersion <<= version { v => if (v.endsWith("SNAPSHOT")) "latest.integration" else v },
-    resolvers <+= version { v => if (v.endsWith("SNAPSHOT")) Classpaths.typesafeSnapshots else Classpaths.typesafeReleases },
+    resolvers <++= version { v => if (v.endsWith("SNAPSHOT")) Seq(Classpaths.typesafeSnapshots) else Seq.empty },
+    resolvers += Classpaths.typesafeReleases,
     crossPaths := false,
     publishMavenStyle := true,
     publishLocally := false,
@@ -29,7 +30,7 @@ object SbtRepublish extends Build {
     },
     credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
     publishArtifact in Test := false,
-    homepage := Some(url("https://github.com/harrah/xsbt")),
+    homepage := Some(url("https://github.com/sbt/sbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
     pomExtra := {
       <scm>
