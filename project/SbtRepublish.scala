@@ -52,7 +52,7 @@ object SbtRepublish extends Build {
     },
     pomIncludeRepository := { _ => false },
     ivyConfigurations += Deps,
-    externalResolvers <<= (resolvers, publishLocally) map { (rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else rs }
+    externalResolvers <<= (externalResolvers, resolvers, publishLocally) map { (ers, rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else ers }
   )
 
   lazy val sbtRepublish = Project(
