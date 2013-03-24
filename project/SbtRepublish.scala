@@ -20,6 +20,7 @@ object SbtRepublish extends Build {
     originalSbtVersion <<= version { v => if (v.endsWith("SNAPSHOT")) "latest.integration" else v },
     resolvers <++= version { v => if (v.endsWith("SNAPSHOT")) Seq(Classpaths.typesafeSnapshots) else Seq.empty },
     resolvers += Classpaths.typesafeReleases,
+    resolvers += DefaultMavenRepository,
     crossPaths := false,
     publishMavenStyle := true,
     publishLocally := false,
@@ -52,7 +53,7 @@ object SbtRepublish extends Build {
     },
     pomIncludeRepository := { _ => false },
     ivyConfigurations += Deps,
-    externalResolvers <<= (externalResolvers, resolvers, publishLocally) map { (ers, rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else ers }
+    externalResolvers <<= (resolvers, publishLocally) map { (rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else rs }
   )
 
   lazy val sbtRepublish = Project(
