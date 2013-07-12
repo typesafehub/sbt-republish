@@ -93,8 +93,6 @@ object SbtRepublish extends Build {
     settings = buildSettings ++ assemblySettings ++ Seq(
       libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-integration" % _ % Deps.name },
       libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-compiler" % _ },
-      // fix clash between jansi bundled with jline and jansi dependency from sbt
-      libraryDependencies += "org.fusesource.jansi" % "jansi" % "1.11" % Deps.name,
       managedClasspath in Deps <<= (classpathTypes, update) map { (types, up) => Classpaths.managedJars(Deps, types, up) },
       fullClasspath in assembly <<= managedClasspath in Deps,
       assembleArtifact in packageScala := false,
