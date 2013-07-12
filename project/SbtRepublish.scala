@@ -99,7 +99,10 @@ object SbtRepublish extends Build {
       fullClasspath in assembly <<= managedClasspath in Deps,
       assembleArtifact in packageScala := false,
       excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
-        cp filter { jar => Set("scala-compiler.jar", "interface.jar") contains jar.data.getName }
+        cp filter { jar =>
+          val name = jar.data.getName
+          name.startsWith("scala-") || name.startsWith("interface-")
+        }
       },
       mergeStrategy in assembly <<= (mergeStrategy in assembly)( default => {
         case "NOTICE" => MergeStrategy.first
