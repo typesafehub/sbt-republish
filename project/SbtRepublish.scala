@@ -2,6 +2,7 @@ import sbt._
 import sbt.Keys._
 import sbtassembly.Plugin._
 import sbtassembly.Plugin.AssemblyKeys._
+import sbt.Project.Initialize
 
 object SbtRepublish extends Build {
 
@@ -59,7 +60,7 @@ object SbtRepublish extends Build {
   lazy val sbtRepublish = Project(
     "sbt-republish",
     file("."),
-    aggregate = Seq(sbtInterface, compilerInterface, incrementalCompiler),
+    aggregate = Seq(sbtInterface, compilerInterface, incrementalCompiler, compilerInterfacePrecompiled),
     settings = buildSettings ++ Seq(
       publishArtifact := false,
       publishArtifact in makePom := false
@@ -83,6 +84,17 @@ object SbtRepublish extends Build {
       packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface"),
       publishArtifact in packageBin := false,
       publishArtifact in (Compile, packageSrc) := true
+    )
+  )
+  
+  
+  lazy val compilerInterfacePrecompiled = Project(
+    "compiler-interface-precompiled",
+    file("compiler-interface-precompiled"),
+    dependencies = Seq(sbtInterface),
+    settings = buildSettings ++ Seq(
+      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-interface" % _ % Deps.name classifier "bin" },
+      packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface")
     )
   )
 
@@ -112,11 +124,13 @@ object SbtRepublish extends Build {
     )
   )
 
-  def repackageDependency(packageTask: TaskKey[File], jarName: String) = {
+  def repackageDependency(packageTask: TaskKey[File], jarName: String): Initialize[Task[File]] = {
     (classpathTypes, update, artifactPath in packageTask in Compile) map {
       (types, up, packaged) => {
         val cp = Classpaths.managedJars(Deps, types, up)
-        val jar = cp.find(_.data.getName startsWith jarName).get.data
+        def cantFindError: Nothing =
+          sys.error("Unable to find jar with name: " + jarName + " in " + cp.mkString("\n\t", "\n\t", "\n"))
+        val jar = cp.find(_.data.getName startsWith jarName).getOrElse(cantFindError).data
         IO.copyFile(jar, packaged, false)
         packaged
       }
