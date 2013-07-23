@@ -80,7 +80,9 @@ object SbtRepublish extends Build {
     "compiler-interface",
     file("compiler-interface"),
     settings = buildSettings ++ Seq(
-      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-interface" % _ % Deps.name classifier "src" },
+      libraryDependencies <+= originalSbtVersion { v =>
+        ("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-src"))
+      },
       packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src"),
       publishArtifact in packageBin := false,
       publishArtifact in (Compile, packageSrc) := true
