@@ -81,7 +81,7 @@ object SbtRepublish extends Build {
     file("compiler-interface"),
     settings = buildSettings ++ Seq(
       libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-interface" % _ % Deps.name classifier "src" },
-      packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface"),
+      packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src"),
       publishArtifact in packageBin := false,
       publishArtifact in (Compile, packageSrc) := true
     )
@@ -93,8 +93,10 @@ object SbtRepublish extends Build {
     file("compiler-interface-precompiled"),
     dependencies = Seq(sbtInterface),
     settings = buildSettings ++ Seq(
-      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-interface" % _ % Deps.name classifier "bin" },
-      packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface")
+      libraryDependencies <+= originalSbtVersion { v =>
+         ("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-bin"))
+      },
+      packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface-bin")
     )
   )
 
