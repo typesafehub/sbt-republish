@@ -32,6 +32,7 @@ object SbtRepublish extends Build {
     },
     credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
     publishArtifact in Test := false,
+    publishArtifact in Compile in packageDoc := false,
     homepage := Some(url("https://github.com/sbt/sbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
     pomExtra := {
@@ -95,10 +96,12 @@ object SbtRepublish extends Build {
     file("compiler-interface-precompiled"),
     dependencies = Seq(sbtInterface),
     settings = buildSettings ++ Seq(
-      libraryDependencies <+= originalSbtVersion { v =>
-         ("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-bin"))
+      libraryDependencies <++= originalSbtVersion { v =>
+         Seq(("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-bin")),
+             ("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-src")))
       },
-      packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface-bin")
+      packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface-bin"),
+      packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src")
     )
   )
 
