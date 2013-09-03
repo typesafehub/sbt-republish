@@ -33,7 +33,6 @@ object SbtRepublish extends Build {
     },
     credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
     publishArtifact in Test := false,
-    publishArtifact in Compile in packageDoc := false,
     homepage := Some(url("https://github.com/sbt/sbt")),
     licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
     pomExtra := {
