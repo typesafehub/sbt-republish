@@ -10,6 +10,7 @@ object SbtRepublish extends Build {
   val SnapshotRepository = "https://oss.sonatype.org/content/repositories/snapshots"
 
   val Deps = config("deps") hide
+  val AssembleSources = config("assemble-sources") hide
 
   val originalSbtVersion = SettingKey[String]("original-sbt-version")
   val publishLocally = SettingKey[Boolean]("publish-locally")
@@ -72,9 +73,11 @@ object SbtRepublish extends Build {
     file("sbt-interface"),
     settings = buildSettings ++ Seq(
       libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "interface" % _ % Deps.name },
-      packageBin in Compile <<= repackageDependency(packageBin, "interface")
+      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "interface" % _ % (AssembleSources.name+"->sources") },
+      packageBin in Compile <<= repackageDependency(packageBin, "interface"),
+      packageSrc in Compile <<= repackageDependency(packageSrc, "interface", AssembleSources, updateClassifiers, Some(Set("src")))
     )
-  )
+  ).configs(Deps, AssembleSources)
 
   lazy val compilerInterface = Project(
     "compiler-interface",
@@ -95,22 +98,17 @@ object SbtRepublish extends Build {
     file("compiler-interface-precompiled"),
     dependencies = Seq(sbtInterface),
     settings = buildSettings ++ Seq(
-      libraryDependencies <+= originalSbtVersion { v =>
-         ("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-bin"))
+      libraryDependencies <++= originalSbtVersion { v =>
+         Seq(("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-bin")),
+             ("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-src")))
       },
-      packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface-bin")
+      packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface-bin"),
+      packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src")
     )
   )
-
-  lazy val incrementalCompiler = Project(
-    "incremental-compiler",
-    file("incremental-compiler"),
-    dependencies = Seq(sbtInterface),
-    settings = buildSettings ++ assemblySettings ++ Seq(
-      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-integration" % _ % Deps.name },
-      libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-compiler" % _ },
-      managedClasspath in Deps <<= (classpathTypes, update) map { (types, up) => Classpaths.managedJars(Deps, types, up) },
-      fullClasspath in assembly <<= managedClasspath in Deps,
+  
+  val basicAssemblySettings: Seq[Setting[_]] =
+    Seq(
       assembleArtifact in packageScala := false,
       excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
         cp filter { jar =>
@@ -121,17 +119,43 @@ object SbtRepublish extends Build {
       mergeStrategy in assembly <<= (mergeStrategy in assembly)( default => {
         case "NOTICE" => MergeStrategy.first
         case x => default(x)
-      }),
+      })
+    )
+  
+  lazy val incrementalCompiler = Project(
+    "incremental-compiler",
+    file("incremental-compiler"),
+    dependencies = Seq(sbtInterface),
+    settings = buildSettings ++ assemblySettings ++ basicAssemblySettings ++ 
+              inConfig(AssembleSources)(assemblySettings ++ basicAssemblySettings) ++ Seq(
+      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-integration" % _ % Deps.name },
+      // Since sources aren't transitive here, we may need to be more clever on how we pull these in.  I.e. we pull in everything, so transitive deps come too,
+      // and then use the Classpaths.managedJars method to filter only src jars.
+      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-integration" % _ % (AssembleSources.name + "->*") },
+      libraryDependencies <+= scalaVersion { "org.scala-lang" % "scala-compiler" % _ },
+      managedClasspath in Deps <<= (classpathTypes, update) map { (types, up) => Classpaths.managedJars(Deps, types, up) },
+      managedClasspath in AssembleSources <<= (updateClassifiers) map { (up) => Classpaths.managedJars(AssembleSources, Set("src"), up) },
+      fullClasspath in assembly <<= managedClasspath in Deps,
+      fullClasspath in assembly in AssembleSources <<= managedClasspath in AssembleSources,
       packageBin in Compile <<= (assembly, artifactPath in packageBin in Compile) map {
         (assembled, packaged) => IO.copyFile(assembled, packaged, false); packaged
-      }
+      },
+      packageSrc in Compile <<= (assembly in AssembleSources, artifactPath in packageSrc in Compile) map {
+        (assembled, packaged) => IO.copyFile(assembled, packaged, false); packaged
+      },      
+      jarName in assembly in AssembleSources <<= (name, version) map { (name, version) => name + "-assembly-sources-" + version + ".jar" }
     )
-  )
+  ).configs(AssembleSources, Deps)
 
-  def repackageDependency(packageTask: TaskKey[File], jarName: String): Initialize[Task[File]] = {
-    (classpathTypes, update, artifactPath in packageTask in Compile) map {
+  def repackageDependency(packageTask: TaskKey[File], 
+                          jarName: String, 
+                          config: Configuration = Deps, 
+                          updateTask: TaskKey[UpdateReport] = update,
+                          optTypes: Option[Set[String]] = None): Initialize[Task[File]] = {
+    (classpathTypes, updateTask, artifactPath in packageTask in Compile) map {
       (types, up, packaged) => {
-        val cp = Classpaths.managedJars(Deps, types, up)
+        val realTypes = optTypes getOrElse types
+        val cp = Classpaths.managedJars(config, realTypes, up)
         def cantFindError: Nothing =
           sys.error("Unable to find jar with name: " + jarName + " in " + cp.mkString("\n\t", "\n\t", "\n"))
         val jar = cp.find(_.data.getName startsWith jarName).getOrElse(cantFindError).data
