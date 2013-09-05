@@ -91,8 +91,8 @@ object SbtRepublish extends Build {
       publishArtifact in (Compile, packageSrc) := true
     )
   )
-  
-  
+
+
   lazy val compilerInterfacePrecompiled = Project(
     "compiler-interface-precompiled",
     file("compiler-interface-precompiled"),
@@ -106,7 +106,7 @@ object SbtRepublish extends Build {
       packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src")
     )
   )
-  
+
   val basicAssemblySettings: Seq[Setting[_]] =
     Seq(
       assembleArtifact in packageScala := false,
@@ -121,12 +121,12 @@ object SbtRepublish extends Build {
         case x => default(x)
       })
     )
-  
+
   lazy val incrementalCompiler = Project(
     "incremental-compiler",
     file("incremental-compiler"),
     dependencies = Seq(sbtInterface),
-    settings = buildSettings ++ assemblySettings ++ basicAssemblySettings ++ 
+    settings = buildSettings ++ assemblySettings ++ basicAssemblySettings ++
               inConfig(AssembleSources)(assemblySettings ++ basicAssemblySettings) ++ Seq(
       libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "compiler-integration" % _ % Deps.name },
       // Since sources aren't transitive here, we may need to be more clever on how we pull these in.  I.e. we pull in everything, so transitive deps come too,
@@ -142,14 +142,14 @@ object SbtRepublish extends Build {
       },
       packageSrc in Compile <<= (assembly in AssembleSources, artifactPath in packageSrc in Compile) map {
         (assembled, packaged) => IO.copyFile(assembled, packaged, false); packaged
-      },      
+      },
       jarName in assembly in AssembleSources <<= (name, version) map { (name, version) => name + "-assembly-sources-" + version + ".jar" }
     )
   ).configs(AssembleSources, Deps)
 
-  def repackageDependency(packageTask: TaskKey[File], 
-                          jarName: String, 
-                          config: Configuration = Deps, 
+  def repackageDependency(packageTask: TaskKey[File],
+                          jarName: String,
+                          config: Configuration = Deps,
                           updateTask: TaskKey[UpdateReport] = update,
                           optTypes: Option[Set[String]] = None): Initialize[Task[File]] = {
     (classpathTypes, updateTask, artifactPath in packageTask in Compile) map {
