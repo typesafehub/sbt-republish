@@ -17,8 +17,8 @@ object SbtRepublish extends Build {
 
   lazy val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.typesafe.sbt",
-    version := "0.13.2-SNAPSHOT",
-    scalaVersion := "2.10.3",
+    version := "0.13.5",
+    scalaVersion := "2.10.4",
     originalSbtVersion <<= version { v => if (v.endsWith("SNAPSHOT")) "latest.integration" else v },
     resolvers <++= version { v => if (v.endsWith("SNAPSHOT")) Seq(Classpaths.typesafeSnapshots) else Seq.empty },
     resolvers += Classpaths.typesafeReleases,
