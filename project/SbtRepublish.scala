@@ -15,9 +15,9 @@ object SbtRepublish extends Build {
   val originalSbtVersion = SettingKey[String]("original-sbt-version")
   val publishLocally = SettingKey[Boolean]("publish-locally")
 
-  lazy val buildSettings = Seq(
+  lazy val buildSettings = Defaults.defaultSettings ++ Seq(
     organization := "com.typesafe.sbt",
-    version := "0.13.6-SNAPSHOT",
+    version := "0.13.5",
     scalaVersion := "2.10.4",
     originalSbtVersion <<= version { v => if (v.endsWith("SNAPSHOT")) "latest.integration" else v },
     resolvers <++= version { v => if (v.endsWith("SNAPSHOT")) Seq(Classpaths.typesafeSnapshots) else Seq.empty },
@@ -61,7 +61,7 @@ object SbtRepublish extends Build {
   lazy val sbtRepublish = Project(
     "sbt-republish",
     file("."),
-    aggregate = Seq(sbtInterface, compilerInterface, incrementalCompiler, compilerInterfacePrecompiled, sbtLauncher, sbtLaunchInterface),
+    aggregate = Seq(sbtInterface, compilerInterface, incrementalCompiler, compilerInterfacePrecompiled),
     settings = buildSettings ++ Seq(
       publishArtifact := false,
       publishArtifact in makePom := false
@@ -78,32 +78,6 @@ object SbtRepublish extends Build {
       packageSrc in Compile <<= repackageDependency(packageSrc, "interface", AssembleSources, updateClassifiers, Some(Set("src")))
     )
   ).configs(Deps, AssembleSources)
-
-
-  lazy val sbtLaunchInterface = Project(
-    "sbt-launcher-interface",
-    file("sbt-launcher-interface"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "launcher-interface" % _ % Deps.name },
-      libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "launcher-interface" % _ % (AssembleSources.name+"->sources") },
-      packageBin in Compile <<= repackageDependency(packageBin, "launcher-interface"),
-      packageSrc in Compile <<= repackageDependency(packageSrc, "launcher-interface", AssembleSources, updateClassifiers, Some(Set("src")))
-    )
-  ).configs(Deps, AssembleSources)
-
-
-  lazy val sbtLauncher = Project(
-    "sbt-launcher",
-    file("sbt-launcher"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies += {
-        val launchJarUrl = s"http://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/${originalSbtVersion.value}/sbt-launch.jar"
-        "org.scala-sbt" % "sbt-launch" % originalSbtVersion.value % Deps.name from launchJarUrl
-      },
-      packageBin in Compile <<= repackageDependency(packageBin, "sbt-launch")
-    )
-  ).configs(Deps)
-
 
   lazy val compilerInterface = Project(
     "compiler-interface",
