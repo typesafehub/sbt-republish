@@ -133,26 +133,15 @@ lazy val commonSettings = Seq(
   },
   // credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
   publishArtifact in Test := false,
-  homepage := Some(url("https://github.com/sbt/sbt")),
+  homepage := Some(url("http://www.scala-sbt.org/")),
   licenses := Seq("BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php")),
-  pomExtra := {
-    <scm>
-      <url>https://github.com/typesafehub/sbt-republish</url>
-      <connection>scm:git:git@github.com:typesafehub/sbt-republish.git</connection>
-    </scm>
-    <developers>
-      <developer>
-        <id>harrah</id>
-        <name>Mark Harrah</name>
-        <url>https://github.com/harrah</url>
-      </developer>
-      <developer>
-        <id>pvlugter</id>
-        <name>Peter Vlugter</name>
-        <url>https://github.com/pvlugter</url>
-      </developer>
-    </developers>
-  },
+  scmInfo := Some(ScmInfo(url("https://github.com/typesafehub/sbt-republish"), "git@github.com:typesafehub/sbt-republish.git")),
+  developers := List(
+    Developer("harrah", "Mark Harrah", "@harrah", url("https://github.com/harrah")),
+    Developer("gkossakowski", "Grzegorz Kossakowski", "@gkossakowski", url("https://github.com/gkossakowski")),
+    Developer("eed3si9n", "Eugene Yokota", "@eed3si9n", url("https://github.com/eed3si9n")),
+    Developer("jsuereth", "Josh Suereth", "@jsuereth", url("https://github.com/jsuereth"))
+  ),
   pomIncludeRepository := { _ => false },
   ivyConfigurations += Deps,
   externalResolvers <<= (resolvers, publishLocally) map { (rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else rs }
