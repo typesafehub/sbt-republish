@@ -1,8 +1,8 @@
 import sbt.Project.Initialize
 import sbtassembly.AssemblyPlugin.baseAssemblySettings
 
-def sbtVersionToRepublish = "0.13.9"
-def sbtScalaVersion = "2.10.5"
+def sbtVersionToRepublish = "0.13.11"
+def sbtScalaVersion = "2.10.6"
 
 val Deps = config("deps") hide
 val AssembleSources = config("assemble-sources") hide
@@ -39,11 +39,12 @@ lazy val compilerInterface = (project in file("compiler-interface")).
   commonSettings,
   name := "compiler-interface",
   libraryDependencies <+= originalSbtVersion { v =>
-    ("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-src"))
+    ("org.scala-sbt" % "compiler-interface" % v % Deps.name).sources()
   },
-  packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src"),
+  packageSrc in Compile <<= repackageDependency(packageSrc, s"compiler-interface-${sbtVersionToRepublish}-sources"),
   publishArtifact in packageBin := false,
-  publishArtifact in (Compile, packageSrc) := true
+  publishArtifact in (Compile, packageSrc) := true,
+  classpathTypes += "src"
 )
 
 lazy val compilerInterfacePrecompiled = (project in file("compiler-interface-precompiled")).
@@ -52,11 +53,11 @@ lazy val compilerInterfacePrecompiled = (project in file("compiler-interface-pre
     commonSettings,
     name := "compiler-interface-precompiled",
     libraryDependencies <++= originalSbtVersion { v =>
-      Seq(("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-bin")),
-          ("org.scala-sbt" % "compiler-interface" % v % Deps.name).artifacts(Artifact("compiler-interface-src")))
+      Seq(("org.scala-sbt" % "compiler-interface" % v % Deps.name).withSources())
     },
-    packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface-bin"),
-    packageSrc in Compile <<= repackageDependency(packageSrc, "compiler-interface-src")
+    packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface"),
+    packageSrc in Compile <<= repackageDependency(packageSrc, s"compiler-interface-${sbtVersionToRepublish}-sources"),
+    classpathTypes += "src"
   )
 
 lazy val incrementalCompiler = (project in file("incremental-compiler")).
