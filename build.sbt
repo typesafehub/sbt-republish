@@ -1,5 +1,6 @@
 import sbt.Project.Initialize
 import sbtassembly.AssemblyPlugin.baseAssemblySettings
+import scala.util.matching.Regex
 
 def sbtVersionToRepublish = "0.13.11"
 def sbtScalaVersion = "2.10.6"
@@ -30,8 +31,8 @@ lazy val sbtInterface = (project in file("sbt-interface")).
     name := "sbt-interface",
     libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "interface" % _ % Deps.name },
     libraryDependencies <+= originalSbtVersion { "org.scala-sbt" % "interface" % _ % (AssembleSources.name+"->sources") },
-    packageBin in Compile <<= repackageDependency(packageBin, "interface"),
-    packageSrc in Compile <<= repackageDependency(packageSrc, "interface", AssembleSources, updateClassifiers, Some(Set("src")))
+    packageBin in Compile <<= repackageDependency(packageBin, new Regex("interface.*")),
+    packageSrc in Compile <<= repackageDependency(packageSrc, new Regex("interface.*"), AssembleSources, updateClassifiers, Some(Set("src")))
   )
 
 lazy val compilerInterface = (project in file("compiler-interface")).
@@ -41,7 +42,7 @@ lazy val compilerInterface = (project in file("compiler-interface")).
   libraryDependencies <+= originalSbtVersion { v =>
     ("org.scala-sbt" % "compiler-interface" % v % Deps.name).sources()
   },
-  packageSrc in Compile <<= repackageDependency(packageSrc, s"compiler-interface-${sbtVersionToRepublish}-sources"),
+  packageSrc in Compile <<= repackageDependency(packageSrc, new Regex("""compiler\-interface.*\-sources""")),
   publishArtifact in packageBin := false,
   publishArtifact in (Compile, packageSrc) := true,
   classpathTypes += "src"
@@ -55,8 +56,8 @@ lazy val compilerInterfacePrecompiled = (project in file("compiler-interface-pre
     libraryDependencies <++= originalSbtVersion { v =>
       Seq(("org.scala-sbt" % "compiler-interface" % v % Deps.name).withSources())
     },
-    packageBin in Compile <<= repackageDependency(packageBin, "compiler-interface"),
-    packageSrc in Compile <<= repackageDependency(packageSrc, s"compiler-interface-${sbtVersionToRepublish}-sources"),
+    packageBin in Compile <<= repackageDependency(packageBin, new Regex("""compiler\-interface.*""")),
+    packageSrc in Compile <<= repackageDependency(packageSrc, new Regex("""compiler\-interface.*\-sources""")),
     classpathTypes += "src"
   )
 
@@ -102,7 +103,7 @@ lazy val basicAssemblySettings: Seq[Setting[_]] =
   )
 
 def repackageDependency(packageTask: TaskKey[File],
-                        jarName: String,
+                        jarNamePattern: Regex,
                         config: Configuration = Deps,
                         updateTask: TaskKey[UpdateReport] = update,
                         optTypes: Option[Set[String]] = None): Initialize[Task[File]] = {
@@ -112,7 +113,9 @@ def repackageDependency(packageTask: TaskKey[File],
       val cp = Classpaths.managedJars(config, realTypes, up)
       def cantFindError: Nothing =
         sys.error("Unable to find jar with name: " + jarName + " in " + cp.mkString("\n\t", "\n\t", "\n"))
-      val jar = cp.find(_.data.getName startsWith jarName).getOrElse(cantFindError).data
+      val jar = cp.find { x =>
+        (jarNamePattern findFirstIn x.data.getName).isDefined
+      }.getOrElse(cantFindError).data
       IO.copyFile(jar, packaged, false)
       packaged
     }
