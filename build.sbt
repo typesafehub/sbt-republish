@@ -142,9 +142,11 @@ lazy val commonSettings = Seq(
   scmInfo := Some(ScmInfo(url("https://github.com/typesafehub/sbt-republish"), "git@github.com:typesafehub/sbt-republish.git")),
   developers := List(
     Developer("harrah", "Mark Harrah", "@harrah", url("https://github.com/harrah")),
-    Developer("gkossakowski", "Grzegorz Kossakowski", "@gkossakowski", url("https://github.com/gkossakowski")),
     Developer("eed3si9n", "Eugene Yokota", "@eed3si9n", url("https://github.com/eed3si9n")),
-    Developer("jsuereth", "Josh Suereth", "@jsuereth", url("https://github.com/jsuereth"))
+    Developer("jsuereth", "Josh Suereth", "@jsuereth", url("https://github.com/jsuereth")),
+    Developer("dwijnand", "Dale Wijnand", "@dwijnand", url("https://github.com/dwijnand")),
+    Developer("gkossakowski", "Grzegorz Kossakowski", "@gkossakowski", url("https://github.com/gkossakowski")),
+    Developer("Duhemm", "Martin Duhem", "@Duhemm", url("https://github.com/Duhemm"))
   ),
   pomIncludeRepository := { _ => false },
   ivyConfigurations += Deps,
