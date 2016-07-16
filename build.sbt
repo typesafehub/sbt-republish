@@ -2,7 +2,7 @@ import sbt.Project.Initialize
 import sbtassembly.AssemblyPlugin.baseAssemblySettings
 import scala.util.matching.Regex
 
-def sbtVersionToRepublish = "0.13.11"
+def sbtVersionToRepublish = "0.13.12"
 def sbtScalaVersion = "2.10.6"
 
 val Deps = config("deps") hide
@@ -21,7 +21,8 @@ lazy val root = (project in file(".")).
       scalaVersion := sbtScalaVersion
     )),
     publishArtifact := false,
-    publishArtifact in makePom := false
+    publishArtifact in makePom := false,
+    publish := ()
   )
 
 lazy val sbtInterface = (project in file("sbt-interface")).
