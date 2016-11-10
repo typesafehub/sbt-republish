@@ -2,7 +2,7 @@ import sbt.Project.Initialize
 import sbtassembly.AssemblyPlugin.baseAssemblySettings
 import scala.util.matching.Regex
 
-def sbtVersionToRepublish = "0.13.12"
+def sbtVersionToRepublish = "0.13.13"
 def sbtScalaVersion = "2.10.6"
 
 val Deps = config("deps") hide
