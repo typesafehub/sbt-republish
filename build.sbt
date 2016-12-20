@@ -150,7 +150,12 @@ lazy val commonSettings = Seq(
   ),
   pomIncludeRepository := { _ => false },
   ivyConfigurations += Deps,
-  externalResolvers := (resolvers, publishLocally) map { (rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else rs }.value
+  externalResolvers := {
+    val rs = resolvers.value
+    val local = publishLocally.value
+    if (local) Seq(Resolver.defaultLocal) ++ rs
+    else rs
+  }
 )
 
 def environment(property: String, env: String): Option[String] =
