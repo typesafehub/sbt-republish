@@ -1,4 +1,3 @@
-import sbt.Project.Initialize
 import sbtassembly.AssemblyPlugin.baseAssemblySettings
 import scala.util.matching.Regex
 
@@ -85,19 +84,19 @@ lazy val incrementalCompiler = (project in file("incremental-compiler")).
     packageSrc in Compile <<= (assembly in AssembleSources, artifactPath in packageSrc in Compile) map {
       (assembled, packaged) => IO.copyFile(assembled, packaged, false); packaged
     },
-    jarName in assembly in AssembleSources <<= (name, version) map { (name, version) => name + "-assembly-sources-" + version + ".jar" }
+    assemblyJarName in assembly in AssembleSources <<= (name, version) map { (name, version) => name + "-assembly-sources-" + version + ".jar" }
   )
 
 lazy val basicAssemblySettings: Seq[Setting[_]] =
   Seq(
-    assembleArtifact in packageScala := false,
-    excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+    assembleArtifact in assemblyPackageScala := false,
+    assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
       cp filter { jar =>
         val name = jar.data.getName
         name.startsWith("scala-") || name.startsWith("interface-")
       }
     },
-    mergeStrategy in assembly <<= (mergeStrategy in assembly)( default => {
+    assemblyMergeStrategy in assembly <<= (mergeStrategy in assembly)( default => {
       case "NOTICE" => MergeStrategy.first
       case x => default(x)
     })
@@ -107,13 +106,13 @@ def repackageDependency(packageTask: TaskKey[File],
                         jarNamePattern: Regex,
                         config: Configuration = Deps,
                         updateTask: TaskKey[UpdateReport] = update,
-                        optTypes: Option[Set[String]] = None): Initialize[Task[File]] = {
+                        optTypes: Option[Set[String]] = None): Def.Initialize[Task[File]] = {
   (classpathTypes, updateTask, artifactPath in packageTask in Compile) map {
     (types, up, packaged) => {
       val realTypes = optTypes getOrElse types
       val cp = Classpaths.managedJars(config, realTypes, up)
       def cantFindError: Nothing =
-        sys.error("Unable to find jar with name: " + jarName + " in " + cp.mkString("\n\t", "\n\t", "\n"))
+        sys.error("Unable to find jar with name: " + assemblyJarName + " in " + cp.mkString("\n\t", "\n\t", "\n"))
       val jar = cp.find { x =>
         (jarNamePattern findFirstIn x.data.getName).isDefined
       }.getOrElse(cantFindError).data
