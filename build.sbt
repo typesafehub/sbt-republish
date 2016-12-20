@@ -53,11 +53,11 @@ lazy val compilerInterfacePrecompiled = (project in file("compiler-interface-pre
   settings(
     commonSettings,
     name := "compiler-interface-precompiled",
-    libraryDependencies <++= originalSbtVersion { v =>
+    libraryDependencies ++= originalSbtVersion { v =>
       Seq(("org.scala-sbt" % "compiler-interface" % v % Deps.name).withSources())
-    },
-    packageBin in Compile <<= repackageDependency(packageBin, new Regex("""compiler\-interface.*""")),
-    packageSrc in Compile <<= repackageDependency(packageSrc, new Regex("""compiler\-interface.*\-sources""")),
+    }.value,
+    packageBin in Compile := repackageDependency(packageBin, new Regex("""compiler\-interface.*""")).value,
+    packageSrc in Compile := repackageDependency(packageSrc, new Regex("""compiler\-interface.*\-sources""")).value,
     classpathTypes += "src"
   )
 
@@ -84,19 +84,19 @@ lazy val incrementalCompiler = (project in file("incremental-compiler")).
     packageSrc in Compile <<= (assembly in AssembleSources, artifactPath in packageSrc in Compile) map {
       (assembled, packaged) => IO.copyFile(assembled, packaged, false); packaged
     },
-    assemblyJarName in assembly in AssembleSources <<= (name, version) map { (name, version) => name + "-assembly-sources-" + version + ".jar" }
+    assemblyJarName in assembly in AssembleSources ~= (name => name + "-assembly-sources-" + version + ".jar")
   )
 
 lazy val basicAssemblySettings: Seq[Setting[_]] =
   Seq(
     assembleArtifact in assemblyPackageScala := false,
-    assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+    assemblyExcludedJars in assembly ~= { cp =>
       cp filter { jar =>
         val name = jar.data.getName
         name.startsWith("scala-") || name.startsWith("interface-")
       }
     },
-    assemblyMergeStrategy in assembly <<= (mergeStrategy in assembly)( default => {
+    assemblyMergeStrategy in assembly ~= ( default => {
       case "NOTICE" => MergeStrategy.first
       case x => default(x)
     })
@@ -130,11 +130,11 @@ lazy val commonSettings = Seq(
   crossPaths := false,
   publishMavenStyle := true,
   publishLocally := false,
-  publishTo <<= (version, publishLocally) { (v, local) =>
+  publishTo := (version, publishLocally) { (v, local) =>
     if (local) Some(Resolver.file("m2", Path.userHome / ".m2" / "repository"))
     else if (v.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
     else Some("releases" at ReleaseRepository)
-  },
+  }.value,
   // credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
   publishArtifact in Test := false,
   homepage := Some(url("http://www.scala-sbt.org/")),
@@ -150,7 +150,7 @@ lazy val commonSettings = Seq(
   ),
   pomIncludeRepository := { _ => false },
   ivyConfigurations += Deps,
-  externalResolvers <<= (resolvers, publishLocally) map { (rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else rs }
+  externalResolvers := (resolvers, publishLocally) map { (rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else rs }.value
 )
 
 def environment(property: String, env: String): Option[String] =
