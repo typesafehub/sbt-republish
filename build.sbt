@@ -1,4 +1,3 @@
-import sbt.Project.Initialize
 import sbtassembly.AssemblyPlugin.baseAssemblySettings
 import scala.util.matching.Regex
 
@@ -54,11 +53,11 @@ lazy val compilerInterfacePrecompiled = (project in file("compiler-interface-pre
   settings(
     commonSettings,
     name := "compiler-interface-precompiled",
-    libraryDependencies <++= originalSbtVersion { v =>
+    libraryDependencies ++= originalSbtVersion { v =>
       Seq(("org.scala-sbt" % "compiler-interface" % v % Deps.name).withSources())
-    },
-    packageBin in Compile <<= repackageDependency(packageBin, new Regex("""compiler\-interface.*""")),
-    packageSrc in Compile <<= repackageDependency(packageSrc, new Regex("""compiler\-interface.*\-sources""")),
+    }.value,
+    packageBin in Compile := repackageDependency(packageBin, new Regex("""compiler\-interface.*""")).value,
+    packageSrc in Compile := repackageDependency(packageSrc, new Regex("""compiler\-interface.*\-sources""")).value,
     classpathTypes += "src"
   )
 
@@ -85,19 +84,19 @@ lazy val incrementalCompiler = (project in file("incremental-compiler")).
     packageSrc in Compile <<= (assembly in AssembleSources, artifactPath in packageSrc in Compile) map {
       (assembled, packaged) => IO.copyFile(assembled, packaged, false); packaged
     },
-    jarName in assembly in AssembleSources <<= (name, version) map { (name, version) => name + "-assembly-sources-" + version + ".jar" }
+    assemblyJarName in assembly in AssembleSources ~= (name => name + "-assembly-sources-" + version + ".jar")
   )
 
 lazy val basicAssemblySettings: Seq[Setting[_]] =
   Seq(
-    assembleArtifact in packageScala := false,
-    excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+    assembleArtifact in assemblyPackageScala := false,
+    assemblyExcludedJars in assembly ~= { cp =>
       cp filter { jar =>
         val name = jar.data.getName
         name.startsWith("scala-") || name.startsWith("interface-")
       }
     },
-    mergeStrategy in assembly <<= (mergeStrategy in assembly)( default => {
+    assemblyMergeStrategy in assembly ~= ( default => {
       case "NOTICE" => MergeStrategy.first
       case x => default(x)
     })
@@ -107,13 +106,13 @@ def repackageDependency(packageTask: TaskKey[File],
                         jarNamePattern: Regex,
                         config: Configuration = Deps,
                         updateTask: TaskKey[UpdateReport] = update,
-                        optTypes: Option[Set[String]] = None): Initialize[Task[File]] = {
+                        optTypes: Option[Set[String]] = None): Def.Initialize[Task[File]] = {
   (classpathTypes, updateTask, artifactPath in packageTask in Compile) map {
     (types, up, packaged) => {
       val realTypes = optTypes getOrElse types
       val cp = Classpaths.managedJars(config, realTypes, up)
       def cantFindError: Nothing =
-        sys.error("Unable to find jar with name: " + jarName + " in " + cp.mkString("\n\t", "\n\t", "\n"))
+        sys.error("Unable to find jar with name: " + assemblyJarName + " in " + cp.mkString("\n\t", "\n\t", "\n"))
       val jar = cp.find { x =>
         (jarNamePattern findFirstIn x.data.getName).isDefined
       }.getOrElse(cantFindError).data
@@ -131,11 +130,11 @@ lazy val commonSettings = Seq(
   crossPaths := false,
   publishMavenStyle := true,
   publishLocally := false,
-  publishTo <<= (version, publishLocally) { (v, local) =>
+  publishTo := (version, publishLocally) { (v, local) =>
     if (local) Some(Resolver.file("m2", Path.userHome / ".m2" / "repository"))
     else if (v.endsWith("SNAPSHOT")) Some("snapshots" at SnapshotRepository)
     else Some("releases" at ReleaseRepository)
-  },
+  }.value,
   // credentials += Credentials(Path.userHome / ".ivy2" / "sonatype-credentials"),
   publishArtifact in Test := false,
   homepage := Some(url("http://www.scala-sbt.org/")),
@@ -151,7 +150,12 @@ lazy val commonSettings = Seq(
   ),
   pomIncludeRepository := { _ => false },
   ivyConfigurations += Deps,
-  externalResolvers <<= (resolvers, publishLocally) map { (rs, local) => if (local) Seq(Resolver.defaultLocal) ++ rs else rs }
+  externalResolvers := {
+    val rs = resolvers.value
+    val local = publishLocally.value
+    if (local) Seq(Resolver.defaultLocal) ++ rs
+    else rs
+  }
 )
 
 def environment(property: String, env: String): Option[String] =
